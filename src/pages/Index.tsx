@@ -3,7 +3,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import HabitForm from '@/components/HabitForm';
 import HabitList from '@/components/HabitList';
-import { Navigate } from 'react-router-dom';
+import { Navigate, Link } from 'react-router-dom';
 
 export default function Index() {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -42,8 +42,13 @@ export default function Index() {
             <h1 className="text-2xl font-bold text-gray-900">Habit Tracker</h1>
             <div className="flex items-center space-x-4">
               <span className="text-sm text-gray-600">
-                Welcome, {user.email}
+                {user.user_metadata.username || user.email}
               </span>
+              <Link to="/profile">
+                <Button variant="ghost">
+                  Profile
+                </Button>
+              </Link>
               <Button variant="outline" onClick={handleSignOut}>
                 Sign Out
               </Button>
@@ -57,7 +62,7 @@ export default function Index() {
           <div className="lg:col-span-1">
             <HabitForm onHabitAdded={handleHabitAdded} />
           </div>
-          
+
           <div className="lg:col-span-2">
             <div className="mb-6">
               <h2 className="text-xl font-semibold text-gray-800 mb-2">Your Habits</h2>
