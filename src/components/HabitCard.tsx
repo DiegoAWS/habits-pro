@@ -1,8 +1,6 @@
 import { useState } from 'react';
 import { Plus, Minus, Trash2, Target } from 'lucide-react';
 import { HabitWithCounts } from './types';
-import { createColorVariations } from '@/lib/utils';
-
 
 type HabitCardProps = {
   habit: HabitWithCounts;
@@ -10,153 +8,142 @@ type HabitCardProps = {
   onUndoLast: () => void;
   onDeleteHabit: () => void;
 }
+
 export default function HabitCard({ habit, onMarkDone, onUndoLast, onDeleteHabit }: HabitCardProps) {
-  const colors = createColorVariations(habit.color_rgb);
   const [showAnimation, setShowAnimation] = useState(0);
   const isGoalAchieved = habit.schedule_type === 'daily' ? habit.daily_count >= habit.target_frequency : habit.weekly_count >= habit.target_frequency;
 
   const overAchievement = habit.schedule_type === 'daily' ? habit.daily_count - habit.target_frequency : habit.weekly_count - habit.target_frequency;
   const progressPercentage = habit.schedule_type === 'daily' ? (habit.daily_count / habit.target_frequency) * 100 : (habit.weekly_count / habit.target_frequency) * 100;
   const currentCount = habit.schedule_type === 'daily' ? habit.daily_count : habit.weekly_count;
+  const targetFrequency = habit.schedule_type === 'daily' ? habit.target_frequency : habit.target_frequency * 7;
+
+  // Wrapped handlers to trigger animations
+  const handleMarkDone = () => {
+    onMarkDone();
+    setShowAnimation(1);
+    setTimeout(() => setShowAnimation(0), 1000);
+  };
+
+  const handleUndoLast = () => {
+    onUndoLast();
+    setShowAnimation(-1);
+    setTimeout(() => setShowAnimation(0), 1000);
+  };
 
   return (
-    <div className="relative w-full">
-
-      {/* Animation overlay */}
-      {showAnimation && (
+    <div className="relative w-full max-w-sm mx-auto">
+      {/* Animation overlay with futuristic scale animation */}
+      {showAnimation ? (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-50">
-          <div className={`text-6xl font-bold animate-bounce ${showAnimation > 0 ? 'text-emerald-400' : 'text-red-400'} drop-shadow-lg`}>
+          <div className={`text-5xl font-bold animate-[scale-up_0.5s_ease-out] ${showAnimation > 0 ? 'text-emerald-400' : 'text-red-400'} drop-shadow-2xl`}>
             {showAnimation > 0 ? '+1' : '-1'}
           </div>
         </div>
-      )}
+      ) : null}
 
-      {/* Undo button - top left corner */}
-      <button
-        onClick={onUndoLast}
-        disabled={currentCount === 0}
-        className="absolute -top-2 -left-2 z-40 w-8 h-8 bg-white/90 hover:bg-white backdrop-blur-sm border border-gray-200 rounded-full flex items-center justify-center transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl hover:scale-105"
-        title="Undo last mark"
-      >
-        <Minus className="h-3 w-3 text-gray-700" style={{ filter: 'drop-shadow(0 0.5px 1px rgba(255,255,255,0.8))' }} />
-      </button>
+      {/* Main card container */}
+      <div className="relative w-full h-36 rounded-xl overflow-hidden transition-all duration-300 ease-in-out transform hover:scale-105 bg-white/95 backdrop-blur-lg border border-gray-200/50 shadow-lg hover:shadow-xl">
 
-      {/* Delete button - top right corner */}
-      <button
-        onClick={onDeleteHabit}
-        className="absolute -top-2 -right-2 z-40 w-8 h-8 bg-red-50 hover:bg-red-100 backdrop-blur-sm border border-red-200 rounded-full flex items-center justify-center transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl hover:scale-105"
-        title="Delete habit"
-      >
-        <Trash2 className="h-3 w-3 text-red-600" style={{ filter: 'drop-shadow(0 0.5px 1px rgba(255,255,255,0.8))' }} />
-      </button>
+        {/* Integrated undo button - top left corner within card */}
+        <button
+          onClick={handleUndoLast}
+          disabled={currentCount === 0}
+          className="absolute top-2 left-2 z-40 w-7 h-7 bg-gray-100/80 hover:bg-gray-200/90 backdrop-blur-sm border border-gray-300/50 rounded-full flex items-center justify-center transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed hover:scale-110 focus:outline-none focus:ring-2 focus:ring-gray-400"
+          title="Undo last mark"
+          aria-label="Undo last mark"
+        >
+          <Minus className="h-3.5 w-3.5 text-gray-600" />
+        </button>
 
-      {/* Main Mark Done Button */}
-      <button
-        onClick={onMarkDone}
-        className="relative w-full h-32 rounded-2xl overflow-hidden transition-all duration-300 ease-out transform active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.02] border border-white/20 backdrop-blur-sm"
-        style={{
-          background: isGoalAchieved
-            ? `linear-gradient(135deg, rgb(${colors.achieved}), rgb(${colors.lighter}), rgb(255, 215, 0))`
-            : `linear-gradient(135deg, rgb(${colors.base}), rgb(${colors.lighter}), rgb(${colors.darker}))`,
-          boxShadow: `0 25px 50px -12px rgba(${colors.base}, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1)`
-        }}
-      >
-        {/* Glowing effect */}
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent opacity-50" />
+        {/* Integrated delete button - top right corner within card */}
+        <button
+          onClick={onDeleteHabit}
+          className="absolute top-2 right-2 z-40 w-7 h-7 bg-red-50/80 hover:bg-red-100/90 backdrop-blur-sm border border-red-300/50 rounded-full flex items-center justify-center transition-all duration-200 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-red-400"
+          title="Delete habit"
+          aria-label="Delete habit"
+        >
+          <Trash2 className="h-3.5 w-3.5 text-red-500" />
+        </button>
 
-        {/* Floating particles effect */}
-        <div className="absolute inset-0">
-          {[...Array(8)].map((_, i) => (
-            <div
-              key={i}
-              className="absolute w-1 h-1 bg-white/30 rounded-full animate-pulse"
-              style={{
-                left: `${15 + i * 10}%`,
-                top: `${20 + (i % 3) * 30}%`,
-                animationDelay: `${i * 0.3}s`,
-                animationDuration: '4s'
-              }}
-            />
-          ))}
-        </div>
-
-        {/* Main content */}
-        <div className="relative z-10 h-full flex flex-col justify-between p-4 text-white">
-          {/* Header with habit name and badge */}
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-2">
-              <Target className="h-5 w-5 text-white/90 drop-shadow-lg" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.3)', filter: 'drop-shadow(0 0 1px rgba(0,0,0,0.8))' }} />
-              <h3 className="font-bold text-lg truncate max-w-32 drop-shadow-lg" style={{
-                textShadow: '1px 1px 2px rgba(0,0,0,0.5)',
-                WebkitTextStroke: '0.5px rgba(0,0,0,0.3)'
-              }}>{habit.name}</h3>
-            </div>
-
-            <div className="flex items-center gap-2">
-              {isGoalAchieved && overAchievement > 0 && (
-                <div className="flex items-center gap-1 bg-white/20 rounded-full px-2 py-1">
-                  <span className="text-xs font-bold text-yellow-200 drop-shadow-lg" style={{
-                    textShadow: '1px 1px 2px rgba(0,0,0,0.4)',
-                    WebkitTextStroke: '0.3px rgba(0,0,0,0.4)'
-                  }}>+{overAchievement}</span>
+        {/* Main clickable area */}
+        <button
+          onClick={handleMarkDone}
+          className="relative w-full h-full p-4 text-gray-800 transition-all duration-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+          aria-label="Mark habit as done"
+        >
+          {/* Main content with clean layout */}
+          <div className="relative z-10 h-full flex flex-col justify-between">
+            {/* Header with adjusted spacing for integrated buttons */}
+            <div className="flex items-start justify-between pt-6">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 bg-gray-100 rounded-full flex items-center justify-center">
+                  <Target className="h-3.5 w-3.5 text-gray-600" />
                 </div>
-              )}
-              <span className="bg-white/20 rounded-full px-2 py-1 text-xs font-medium drop-shadow-lg" style={{
-                textShadow: '0 1px 2px rgba(0,0,0,0.3)',
-                WebkitTextStroke: '0.3px rgba(0,0,0,0.2)'
-              }}>
-                {habit.schedule_type}
-              </span>
+                <h3 className="font-sans font-bold text-base sm:text-lg line-clamp-2 text-gray-900">{habit.name}</h3>
+              </div>
+              <div className="flex items-center gap-2">
+                {isGoalAchieved && overAchievement > 0 && (
+                  <span className="bg-emerald-100 text-emerald-700 rounded-full px-2 py-1 text-xs font-bold">
+                    +{overAchievement}
+                  </span>
+                )}
+                <span className="bg-gray-100 text-gray-700 rounded-full px-2 py-1 text-xs font-medium">
+                  {habit.schedule_type}
+                </span>
+              </div>
             </div>
-          </div>
 
-          {/* Progress section */}
-          <div className="space-y-3">
-            {/* Progress bar */}
-            <div className="w-full bg-white/20 rounded-full h-2 overflow-hidden backdrop-blur-sm">
+            {/* Progress section */}
+            <div className="space-y-3">
+              {/* Progress bar with clean design */}
               <div
-                className="h-full transition-all duration-700 ease-out bg-gradient-to-r from-white/80 to-white"
-                style={{ width: `${progressPercentage}%` }}
-              />
-            </div>
+                className="w-full bg-gray-200 rounded-full h-2 overflow-hidden"
+                role="progressbar"
+                aria-valuenow={progressPercentage}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-label={`Progress: ${currentCount} out of ${habit.target_frequency}`}
+              >
+                <div
+                  className="h-full transition-all duration-500 ease-out rounded-full"
+                  style={{
+                    width: `${progressPercentage}%`,
+                    background: `linear-gradient(to right, #3b82f6, #60a5fa)`,
+                    boxShadow: `0 0 8px rgba(59, 130, 246, 0.3)`
+                  }}
+                />
+              </div>
 
-            {/* Stats and action */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="text-left">
-                  <div className="text-2xl font-bold leading-none drop-shadow-lg" style={{
-                    textShadow: '1px 1px 3px rgba(0,0,0,0.5)',
-                    WebkitTextStroke: '0.5px rgba(0,0,0,0.4)'
-                  }}>
-                    {currentCount}/{habit.target_frequency}
-                  </div>
-                  <div className="text-xs text-white/80 drop-shadow-lg" style={{
-                    textShadow: '0 1px 2px rgba(0,0,0,0.4)',
-                    WebkitTextStroke: '0.2px rgba(0,0,0,0.3)'
-                  }}>
-                    {habit.schedule_type === 'daily' ? 'today' : 'this week'}
-                  </div>
-                </div>
-                {isGoalAchieved && (
-                  <div className="text-right">
-                    <div className="text-xs text-yellow-200 font-medium drop-shadow-lg" style={{
-                      textShadow: '1px 1px 2px rgba(0,0,0,0.4)',
-                      WebkitTextStroke: '0.3px rgba(0,0,0,0.3)'
-                    }}>
-                      ✨ Complete!
+              {/* Stats and action */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="text-left">
+                    <div className="text-xl font-bold leading-none text-gray-900">
+                      {currentCount}/{habit.target_frequency}
+                    </div>
+                    <div className="text-xs text-gray-600">
+                      {habit.schedule_type === 'daily' ? 'today' : 'this week'}
                     </div>
                   </div>
-                )}
-              </div>
+                  {isGoalAchieved && (
+                    <div className="text-xs text-emerald-600 font-medium">
+                      ✨ Complete!
+                    </div>
+                  )}
+                </div>
 
-              {/* Mark Done icon */}
-              <div className="flex items-center justify-center w-12 h-12 bg-white/20 rounded-full backdrop-blur-sm">
-                <Plus className="h-6 w-6 text-white drop-shadow-lg" style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.3)) drop-shadow(0 0 1px rgba(0,0,0,0.8))' }} />
+                {/* Clean + icon in subtle orb */}
+                <div
+                  className="flex items-center justify-center w-11 h-11 sm:w-12 sm:h-12 rounded-full transition-all duration-300 hover:scale-110 bg-blue-50 border border-blue-200"
+                >
+                  <Plus className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      </button>
+        </button>
+      </div>
     </div>
   );
 }

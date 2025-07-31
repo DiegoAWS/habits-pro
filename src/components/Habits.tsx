@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { HabitWithCounts } from "./types";
-import { addHabitMark, getHabitsWithCounts } from "@/services/habitsService";
+import { addHabitMark, createHabit, deleteHabit, getHabitsWithCounts, removeHabitMark } from "@/services/habitsService";
 import HabitCard from "./HabitCard";
+import HabitForm from "./HabitForm";
 
 const Habits = () => {
     const [habits, setHabits] = useState<HabitWithCounts[]>([]);
@@ -24,30 +25,38 @@ const Habits = () => {
                     : { ...habit, weekly_count: habit.weekly_count + 1 }
                 : habit));
 
-        console.log('after', habits);
         await addHabitMark(habitId);
         await fetchHabits();
-        console.log('after fetch', habits);
     }
 
-    const handleUndoLast = (habitId: string) => {
-        console.log('undo last', habitId);
+    const handleUndoLast = async (habitId: string) => {
+        setHabits(prevHabits => prevHabits
+            .map(habit => habit.id === habitId ?
+                habit.schedule_type === 'daily' ?
+                    { ...habit, daily_count: habit.daily_count - 1 }
+                    : { ...habit, weekly_count: habit.weekly_count - 1 }
+                : habit));
+
+        await removeHabitMark(habitId);
+        await fetchHabits();
     }
 
-    const handleDeleteHabit = (habitId: string) => {
-        console.log('delete habit', habitId);
+    const handleDeleteHabit = async (habitId: string) => {
+        setHabits(prevHabits => prevHabits.filter(habit => habit.id !== habitId));
+        await deleteHabit(habitId);
+        await fetchHabits();
+    }
+
+    const onHabitAdded = async (habit) => {
+        setHabits(prevHabits => [{ id: "optimistic" + Date.now(), ...habit, daily_count: 0, weekly_count: 0 }, ...prevHabits]);
+        await createHabit(habit);
+        await fetchHabits();
     }
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-1">
-                FORM
-                {/* <HabitForm
-                    onHabitAdded={handleHabitAdded}
-                    onAddHabitOptimistically={habitListActions.addHabitOptimistically}
-                    onConfirmOptimisticHabit={habitListActions.confirmOptimisticHabit}
-                    onRemoveOptimisticHabit={habitListActions.removeOptimisticHabit}
-                /> */}
+                <HabitForm onHabitAdded={onHabitAdded} />
             </div>
 
             <div className="lg:col-span-2">
