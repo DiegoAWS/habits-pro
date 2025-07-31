@@ -16,7 +16,6 @@ export default function Auth() {
   const [showPassword, setShowPassword] = useState(false);
   const [showRepeatPassword, setShowRepeatPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [showSignInSuccess, setShowSignInSuccess] = useState(false);
   const [activeTab, setActiveTab] = useState('signin');
   const { signIn, signUp, user, resetPassword } = useAuth();
   const { toast } = useToast();
@@ -65,7 +64,10 @@ export default function Auth() {
         description: error.message,
       });
     } else {
-      setShowSignInSuccess(true);
+      toast({
+        title: "Welcome back!",
+        description: "You've successfully signed in.",
+      });
     }
 
     setLoading(false);
@@ -129,29 +131,6 @@ export default function Auth() {
 
     setLoading(false);
   };
-
-  // Success screen component
-  if (showSignInSuccess) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 to-blue-50 p-4">
-        <Card className="w-full max-w-md text-center">
-          <CardContent className="pt-6">
-            <div className="flex justify-center mb-4">
-              <CheckCircle className="h-16 w-16 text-green-500" />
-            </div>
-            <h2 className="text-2xl font-bold mb-2">Welcome back!</h2>
-            <p className="text-gray-600 mb-6">You've successfully signed in.</p>
-            <Button
-              onClick={() => window.location.href = '/dashboard'}
-              className="w-full"
-            >
-              Continue to Dashboard
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 to-blue-50 p-4">
