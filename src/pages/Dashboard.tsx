@@ -42,7 +42,7 @@ export default function Dashboard() {
                         <h1 className="text-2xl font-bold text-gray-900">Habit Tracker</h1>
                         <div className="flex items-center space-x-4">
                             <span className="text-sm text-gray-600">
-                                Welcome, {user.email}
+                                Welcome, {user.user_metadata.username || user.email}
                             </span>
                             <Link to="/profile">
                                 <Button variant="ghost">
