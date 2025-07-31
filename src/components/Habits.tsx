@@ -42,6 +42,7 @@ const Habits = () => {
     }
 
     const handleDeleteHabit = async (habitId: string) => {
+        // TODO: add confirm modal
         setHabits(prevHabits => prevHabits.filter(habit => habit.id !== habitId));
         await deleteHabit(habitId);
         await fetchHabits();
