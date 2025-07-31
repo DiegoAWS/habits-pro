@@ -1,9 +1,5 @@
 import { FiLink, FiAward, FiStar, FiTrendingUp } from 'react-icons/fi';
-
-interface StreakVisualizerProps {
-  streak: number;
-  bestStreak: number;
-}
+import { StreakVisualizerProps } from './types';
 
 export default function StreakVisualizer({ streak, bestStreak }: StreakVisualizerProps) {
   const getStreakIcon = (streakCount: number) => {
@@ -43,7 +39,7 @@ export default function StreakVisualizer({ streak, bestStreak }: StreakVisualize
           <div className="text-xs text-gray-500">current</div>
         </div>
       </div>
-      
+
       {bestStreak > 0 && (
         <div className="flex items-center space-x-2 pl-3 border-l border-gray-200">
           <FiAward className="w-4 h-4 text-orange-500" />
@@ -55,7 +51,7 @@ export default function StreakVisualizer({ streak, bestStreak }: StreakVisualize
           </div>
         </div>
       )}
-      
+
       <div className="text-xs text-gray-500 font-medium">
         {getStreakMessage(streak)}
       </div>

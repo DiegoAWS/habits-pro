@@ -1,12 +1,12 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
-import HabitForm from '@/components/HabitForm';
-import HabitList from '@/components/HabitList';
 import { Navigate, Link } from 'react-router-dom';
+import Habits from '@/components/Habits';
+
 
 export default function Dashboard() {
-    const [refreshTrigger, setRefreshTrigger] = useState(0);
+
     const { user, signOut, loading } = useAuth();
 
     // Show loading state
@@ -15,7 +15,7 @@ export default function Dashboard() {
             <div className="min-h-screen flex items-center justify-center">
                 <div className="text-center">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-                    <p className="text-gray-600">Loading...</p>
+                    <p className="text-gray-600"></p>
                 </div>
             </div>
         );
@@ -25,10 +25,6 @@ export default function Dashboard() {
     if (!user) {
         return <Navigate to="/login" replace />;
     }
-
-    const handleHabitAdded = () => {
-        setRefreshTrigger(prev => prev + 1);
-    };
 
     const handleSignOut = async () => {
         await signOut();
@@ -58,19 +54,7 @@ export default function Dashboard() {
             </header>
 
             <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    <div className="lg:col-span-1">
-                        <HabitForm onHabitAdded={handleHabitAdded} />
-                    </div>
-
-                    <div className="lg:col-span-2">
-                        <div className="mb-6">
-                            <h2 className="text-xl font-semibold text-gray-800 mb-2">Your Habits</h2>
-                            <p className="text-gray-600">Track your progress and build consistent habits</p>
-                        </div>
-                        <HabitList refreshTrigger={refreshTrigger} />
-                    </div>
-                </div>
+                <Habits />
             </main>
         </div>
     );

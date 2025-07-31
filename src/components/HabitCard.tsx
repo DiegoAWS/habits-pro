@@ -1,191 +1,162 @@
 import { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import StreakVisualizer from './StreakVisualizer';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
-import { useToast } from '@/hooks/use-toast';
-import { FiCheck, FiTrash2 } from 'react-icons/fi';
+import { Plus, Minus, Trash2, Target } from 'lucide-react';
+import { HabitWithCounts } from './types';
+import { createColorVariations } from '@/lib/utils';
 
-interface Habit {
-  id: string;
-  name: string;
-  schedule_type: string;
-  schedule_frequency: number;
-  current_streak: number;
-  best_streak: number;
-  last_completed_date: string | null;
+
+type HabitCardProps = {
+  habit: HabitWithCounts;
+  onMarkDone: () => void;
+  onUndoLast: () => void;
+  onDeleteHabit: () => void;
 }
+export default function HabitCard({ habit, onMarkDone, onUndoLast, onDeleteHabit }: HabitCardProps) {
+  const colors = createColorVariations(habit.color_rgb);
+  const [showAnimation, setShowAnimation] = useState(0);
+  const isGoalAchieved = habit.schedule_type === 'daily' ? habit.daily_count >= habit.target_frequency : habit.weekly_count >= habit.target_frequency;
 
-interface HabitCardProps {
-  habit: Habit;
-  completedToday: boolean;
-  onUpdate: () => void;
-}
-
-export default function HabitCard({ habit, completedToday, onUpdate }: HabitCardProps) {
-  const [loading, setLoading] = useState(false);
-  const { user } = useAuth();
-  const { toast } = useToast();
-
-  const handleComplete = async () => {
-    if (!user || completedToday) return;
-
-    setLoading(true);
-    
-    const today = new Date().toISOString().split('T')[0];
-    
-    // Add completion record
-    const { error: completionError } = await supabase
-      .from('habit_completions')
-      .insert({
-        user_id: user.id,
-        habit_id: habit.id,
-        completed_date: today,
-      });
-
-    if (completionError) {
-      toast({
-        variant: "destructive",
-        title: "Error marking habit complete",
-        description: completionError.message,
-      });
-      setLoading(false);
-      return;
-    }
-
-    // Calculate new streak
-    const newStreak = calculateNewStreak(habit, today);
-    const newBestStreak = Math.max(habit.best_streak, newStreak);
-
-    // Update habit with new streak
-    const { error: updateError } = await supabase
-      .from('habits')
-      .update({
-        current_streak: newStreak,
-        best_streak: newBestStreak,
-        last_completed_date: today,
-      })
-      .eq('id', habit.id);
-
-    if (updateError) {
-      toast({
-        variant: "destructive",
-        title: "Error updating streak",
-        description: updateError.message,
-      });
-    } else {
-      toast({
-        title: "Habit completed!",
-        description: `Great job! Your streak is now ${newStreak} days.`,
-      });
-      onUpdate();
-    }
-    
-    setLoading(false);
-  };
-
-  const handleDelete = async () => {
-    if (!user) return;
-
-    setLoading(true);
-    
-    const { error } = await supabase
-      .from('habits')
-      .delete()
-      .eq('id', habit.id);
-
-    if (error) {
-      toast({
-        variant: "destructive",
-        title: "Error deleting habit",
-        description: error.message,
-      });
-    } else {
-      toast({
-        title: "Habit deleted",
-        description: `${habit.name} has been removed.`,
-      });
-      onUpdate();
-    }
-    
-    setLoading(false);
-  };
-
-  const calculateNewStreak = (habit: Habit, today: string): number => {
-    const todayDate = new Date(today);
-    const lastCompletedDate = habit.last_completed_date ? new Date(habit.last_completed_date) : null;
-    
-    if (!lastCompletedDate) {
-      return 1; // First completion
-    }
-    
-    const diffTime = todayDate.getTime() - lastCompletedDate.getTime();
-    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-    
-    if (diffDays === 1) {
-      return habit.current_streak + 1; // Consecutive day
-    } else {
-      return 1; // Reset streak
-    }
-  };
+  const overAchievement = habit.schedule_type === 'daily' ? habit.daily_count - habit.target_frequency : habit.weekly_count - habit.target_frequency;
+  const progressPercentage = habit.schedule_type === 'daily' ? (habit.daily_count / habit.target_frequency) * 100 : (habit.weekly_count / habit.target_frequency) * 100;
+  const currentCount = habit.schedule_type === 'daily' ? habit.daily_count : habit.weekly_count;
 
   return (
-    <Card className="w-full">
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-lg">{habit.name}</CardTitle>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleDelete}
-            disabled={loading}
-            className="text-red-500 hover:text-red-700 hover:bg-red-50"
-          >
-            <FiTrash2 className="w-4 h-4" />
-          </Button>
+    <div className="relative w-full">
+
+      {/* Animation overlay */}
+      {showAnimation && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-50">
+          <div className={`text-6xl font-bold animate-bounce ${showAnimation > 0 ? 'text-emerald-400' : 'text-red-400'} drop-shadow-lg`}>
+            {showAnimation > 0 ? '+1' : '-1'}
+          </div>
         </div>
-        <div className="flex items-center space-x-2">
-          <Badge variant="secondary">
-            {habit.schedule_frequency}x {habit.schedule_type}
-          </Badge>
-          {completedToday && (
-            <Badge variant="default" className="bg-green-100 text-green-800">
-              ✓ Completed today
-            </Badge>
-          )}
+      )}
+
+      {/* Undo button - top left corner */}
+      <button
+        onClick={onUndoLast}
+        disabled={currentCount === 0}
+        className="absolute -top-2 -left-2 z-40 w-8 h-8 bg-white/90 hover:bg-white backdrop-blur-sm border border-gray-200 rounded-full flex items-center justify-center transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl hover:scale-105"
+        title="Undo last mark"
+      >
+        <Minus className="h-3 w-3 text-gray-700" style={{ filter: 'drop-shadow(0 0.5px 1px rgba(255,255,255,0.8))' }} />
+      </button>
+
+      {/* Delete button - top right corner */}
+      <button
+        onClick={onDeleteHabit}
+        className="absolute -top-2 -right-2 z-40 w-8 h-8 bg-red-50 hover:bg-red-100 backdrop-blur-sm border border-red-200 rounded-full flex items-center justify-center transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl hover:scale-105"
+        title="Delete habit"
+      >
+        <Trash2 className="h-3 w-3 text-red-600" style={{ filter: 'drop-shadow(0 0.5px 1px rgba(255,255,255,0.8))' }} />
+      </button>
+
+      {/* Main Mark Done Button */}
+      <button
+        onClick={onMarkDone}
+        className="relative w-full h-32 rounded-2xl overflow-hidden transition-all duration-300 ease-out transform active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.02] border border-white/20 backdrop-blur-sm"
+        style={{
+          background: isGoalAchieved
+            ? `linear-gradient(135deg, rgb(${colors.achieved}), rgb(${colors.lighter}), rgb(255, 215, 0))`
+            : `linear-gradient(135deg, rgb(${colors.base}), rgb(${colors.lighter}), rgb(${colors.darker}))`,
+          boxShadow: `0 25px 50px -12px rgba(${colors.base}, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1)`
+        }}
+      >
+        {/* Glowing effect */}
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent opacity-50" />
+
+        {/* Floating particles effect */}
+        <div className="absolute inset-0">
+          {[...Array(8)].map((_, i) => (
+            <div
+              key={i}
+              className="absolute w-1 h-1 bg-white/30 rounded-full animate-pulse"
+              style={{
+                left: `${15 + i * 10}%`,
+                top: `${20 + (i % 3) * 30}%`,
+                animationDelay: `${i * 0.3}s`,
+                animationDuration: '4s'
+              }}
+            />
+          ))}
         </div>
-      </CardHeader>
-      
-      <CardContent className="space-y-4">
-        <StreakVisualizer 
-          streak={habit.current_streak} 
-          bestStreak={habit.best_streak}
-        />
-        
-        <Button
-          onClick={handleComplete}
-          disabled={loading || completedToday}
-          className={`w-full ${
-            completedToday 
-              ? 'bg-green-100 text-green-800 cursor-not-allowed' 
-              : 'bg-primary hover:bg-primary/90'
-          }`}
-          variant={completedToday ? "secondary" : "default"}
-        >
-          {loading ? (
-            'Updating...'
-          ) : completedToday ? (
-            <>
-              <FiCheck className="w-4 h-4 mr-2" />
-              Completed Today
-            </>
-          ) : (
-            'Mark Complete'
-          )}
-        </Button>
-      </CardContent>
-    </Card>
+
+        {/* Main content */}
+        <div className="relative z-10 h-full flex flex-col justify-between p-4 text-white">
+          {/* Header with habit name and badge */}
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-2">
+              <Target className="h-5 w-5 text-white/90 drop-shadow-lg" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.3)', filter: 'drop-shadow(0 0 1px rgba(0,0,0,0.8))' }} />
+              <h3 className="font-bold text-lg truncate max-w-32 drop-shadow-lg" style={{
+                textShadow: '1px 1px 2px rgba(0,0,0,0.5)',
+                WebkitTextStroke: '0.5px rgba(0,0,0,0.3)'
+              }}>{habit.name}</h3>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {isGoalAchieved && overAchievement > 0 && (
+                <div className="flex items-center gap-1 bg-white/20 rounded-full px-2 py-1">
+                  <span className="text-xs font-bold text-yellow-200 drop-shadow-lg" style={{
+                    textShadow: '1px 1px 2px rgba(0,0,0,0.4)',
+                    WebkitTextStroke: '0.3px rgba(0,0,0,0.4)'
+                  }}>+{overAchievement}</span>
+                </div>
+              )}
+              <span className="bg-white/20 rounded-full px-2 py-1 text-xs font-medium drop-shadow-lg" style={{
+                textShadow: '0 1px 2px rgba(0,0,0,0.3)',
+                WebkitTextStroke: '0.3px rgba(0,0,0,0.2)'
+              }}>
+                {habit.schedule_type}
+              </span>
+            </div>
+          </div>
+
+          {/* Progress section */}
+          <div className="space-y-3">
+            {/* Progress bar */}
+            <div className="w-full bg-white/20 rounded-full h-2 overflow-hidden backdrop-blur-sm">
+              <div
+                className="h-full transition-all duration-700 ease-out bg-gradient-to-r from-white/80 to-white"
+                style={{ width: `${progressPercentage}%` }}
+              />
+            </div>
+
+            {/* Stats and action */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="text-left">
+                  <div className="text-2xl font-bold leading-none drop-shadow-lg" style={{
+                    textShadow: '1px 1px 3px rgba(0,0,0,0.5)',
+                    WebkitTextStroke: '0.5px rgba(0,0,0,0.4)'
+                  }}>
+                    {currentCount}/{habit.target_frequency}
+                  </div>
+                  <div className="text-xs text-white/80 drop-shadow-lg" style={{
+                    textShadow: '0 1px 2px rgba(0,0,0,0.4)',
+                    WebkitTextStroke: '0.2px rgba(0,0,0,0.3)'
+                  }}>
+                    {habit.schedule_type === 'daily' ? 'today' : 'this week'}
+                  </div>
+                </div>
+                {isGoalAchieved && (
+                  <div className="text-right">
+                    <div className="text-xs text-yellow-200 font-medium drop-shadow-lg" style={{
+                      textShadow: '1px 1px 2px rgba(0,0,0,0.4)',
+                      WebkitTextStroke: '0.3px rgba(0,0,0,0.3)'
+                    }}>
+                      ✨ Complete!
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Mark Done icon */}
+              <div className="flex items-center justify-center w-12 h-12 bg-white/20 rounded-full backdrop-blur-sm">
+                <Plus className="h-6 w-6 text-white drop-shadow-lg" style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.3)) drop-shadow(0 0 1px rgba(0,0,0,0.8))' }} />
+              </div>
+            </div>
+          </div>
+        </div>
+      </button>
+    </div>
   );
 }

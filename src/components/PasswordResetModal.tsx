@@ -7,10 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Eye, EyeOff, ArrowLeft, Lock } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Link } from 'react-router-dom';
-
-interface PasswordResetModalProps {
-    onClose: () => void;
-}
+import { PasswordResetModalProps } from './types';
 
 export default function PasswordResetModal({ onClose }: PasswordResetModalProps) {
     const [newPassword, setNewPassword] = useState('');
